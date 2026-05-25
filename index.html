@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLSTICE — 75-Day Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-word">SOLSTICE</span>
+    <span class="brand-sub">75-Day Challenge</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+      <span class="nav-icon">◈</span> Dashboard
+    </a>
+    <a class="nav-item" data-page="habits" onclick="showPage('habits')">
+      <span class="nav-icon">◉</span> Daily Habits
+    </a>
+    <a class="nav-item" data-page="study" onclick="showPage('study')">
+      <span class="nav-icon">◎</span> Study Log
+    </a>
+    <a class="nav-item" data-page="wellness" onclick="showPage('wellness')">
+      <span class="nav-icon">❧</span> Wellness
+    </a>
+    <a class="nav-item" data-page="weekly" onclick="showPage('weekly')">
+      <span class="nav-icon">◇</span> Weekly Review
+    </a>
+    <a class="nav-item" data-page="milestones" onclick="showPage('milestones')">
+      <span class="nav-icon">✦</span> Milestones
+    </a>
+    <a class="nav-item" data-page="settings" onclick="showPage('settings')">
+      <span class="nav-icon">⊙</span> Settings
+    </a>
+  </nav>
+  <div class="sidebar-mvd">
+    <div class="mvd-title">Minimum Viable Day</div>
+    <div class="mvd-item">↳ 20 min study</div>
+    <div class="mvd-item">↳ 1.5L water</div>
+    <div class="mvd-item">↳ Protein meal</div>
+    <div class="mvd-item">↳ Wash face</div>
+    <div class="mvd-item">↳ No scroll past midnight</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="greeting">Good morning, Shailja.</div>
+      <div class="topbar-meta">
+        <span id="live-date"></span>
+        <span class="sep">·</span>
+        <span id="live-time"></span>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="top-progress-label">
+        <span id="day-label">Day — of 75</span>
+        <span id="pct-label">—%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+        <div class="milestone-markers" id="milestone-markers"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="mood-widget">
+        <div class="mood-label">Today's Mood</div>
+        <div class="mood-stars" id="mood-stars"></div>
+      </div>
+      <div class="streak-badge" id="streak-badge">
+        <span class="streak-num" id="streak-num">0</span>
+        <span class="streak-txt">day streak</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGES -->
+  <main class="content">
+
+    <!-- DASHBOARD PAGE -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="page-date" id="dash-date"></div>
+      </div>
+      <div class="dash-grid">
+        <!-- Today's Score -->
+        <div class="card score-card">
+          <div class="card-label">Today's Score</div>
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill" id="ring-fill" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="score-inner">
+              <div class="score-pct" id="score-pct">—</div>
+              <div class="score-label-inner" id="score-label-inner">—</div>
+            </div>
+          </div>
+          <div class="score-breakdown" id="score-breakdown"></div>
+        </div>
+
+        <!-- Streak + CAT countdown -->
+        <div class="card stats-card">
+          <div class="stat-block">
+            <div class="card-label">Current Streak ✦</div>
+            <div class="stat-big" id="streak-big">0 days</div>
+            <div class="stat-sub" id="streak-sub">Keep going.</div>
+          </div>
+          <div class="divider-h"></div>
+          <div class="stat-block">
+            <div class="card-label">CAT 2027 Countdown</div>
+            <div class="stat-big" id="cat-countdown">—</div>
+            <div class="stat-sub">days remaining</div>
+          </div>
+          <div class="divider-h"></div>
+          <div class="stat-block">
+            <div class="card-label">Challenge Progress</div>
+            <div class="stat-big" id="challenge-day">Day —</div>
+            <div class="stat-sub" id="days-left-label">— days left</div>
+          </div>
+        </div>
+
+        <!-- Quick habits today -->
+        <div class="card quick-habits-card">
+          <div class="card-label">Today's Checklist</div>
+          <div class="quick-habits-list" id="quick-habits-list"></div>
+        </div>
+
+        <!-- Weekly snapshot -->
+        <div class="card weekly-snap-card">
+          <div class="card-label">This Week</div>
+          <div class="week-bars" id="week-bars"></div>
+          <div class="week-avg">
+            Weekly avg: <strong id="week-avg-val">—%</strong>
+          </div>
+        </div>
+
+        <!-- Mood history -->
+        <div class="card mood-history-card">
+          <div class="card-label">Mood This Week</div>
+          <div class="mood-history" id="mood-history"></div>
+        </div>
+
+        <!-- Recovery protocol -->
+        <div class="card recovery-card">
+          <div class="card-label">Recovery Protocol</div>
+          <div class="recovery-list">
+            <div class="recovery-item"><span class="r-trigger">Miss 1 day</span><span class="r-action">Log it. Move on. No spiral.</span></div>
+            <div class="recovery-item"><span class="r-trigger">Miss 2–3 days</span><span class="r-action">Micro-review. Adjust one habit only.</span></div>
+            <div class="recovery-item"><span class="r-trigger">Want to quit</span><span class="r-action">Read your Day 1 intention. Drop to MVD.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DAILY HABITS PAGE -->
+    <section class="page" id="page-habits">
+      <div class="page-header">
+        <h1 class="page-title">Daily Habits</h1>
+        <div class="page-date" id="habits-date"></div>
+      </div>
+      <div class="habits-grid">
+        <div class="card habits-today-card">
+          <div class="card-label">Today — Scored Habits (0–3)</div>
+          <div id="scored-habits-list"></div>
+        </div>
+        <div class="card habits-binary-card">
+          <div class="card-label">Today — Binary Habits</div>
+          <div id="binary-habits-list"></div>
+        </div>
+        <div class="card habit-calendar-card full-width">
+          <div class="card-label">75-Day Habit Calendar</div>
+          <div class="habit-calendars" id="habit-calendars"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STUDY LOG PAGE -->
+    <section class="page" id="page-study">
+      <div class="page-header">
+        <h1 class="page-title">Study Log</h1>
+        <div class="page-date" id="study-date"></div>
+      </div>
+      <div class="study-grid">
+        <div class="card study-entry-card">
+          <div class="card-label">Log Today's Study</div>
+          <div class="study-form" id="study-form"></div>
+        </div>
+        <div class="card study-stats-card">
+          <div class="card-label">Study Stats</div>
+          <div id="study-stats"></div>
+        </div>
+        <div class="card study-log-card full-width">
+          <div class="card-label">Recent Study Sessions</div>
+          <div id="study-log-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WELLNESS PAGE -->
+    <section class="page" id="page-wellness">
+      <div class="page-header">
+        <h1 class="page-title">Wellness</h1>
+        <div class="page-date" id="wellness-date"></div>
+      </div>
+      <div class="wellness-grid">
+        <div class="card well-water-card">
+          <div class="card-label">Hydration Today</div>
+          <div class="water-tracker" id="water-tracker"></div>
+        </div>
+        <div class="card well-sleep-card">
+          <div class="card-label">Sleep Last Night</div>
+          <div class="sleep-log" id="sleep-log"></div>
+        </div>
+        <div class="card well-protein-card">
+          <div class="card-label">Nutrition</div>
+          <div class="protein-log" id="protein-log"></div>
+        </div>
+        <div class="card well-movement-card">
+          <div class="card-label">Movement Today</div>
+          <div class="movement-log" id="movement-log"></div>
+        </div>
+        <div class="card well-skin-card">
+          <div class="card-label">Self-Care Log</div>
+          <div class="skin-log" id="skin-log"></div>
+        </div>
+        <div class="card well-mood-card">
+          <div class="card-label">Mood Journal</div>
+          <div class="mood-journal" id="mood-journal"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WEEKLY REVIEW PAGE -->
+    <section class="page" id="page-weekly">
+      <div class="page-header">
+        <h1 class="page-title">Weekly Review</h1>
+        <div class="page-date" id="weekly-date"></div>
+      </div>
+      <div class="weekly-grid">
+        <div class="card review-questions-card">
+          <div class="card-label">Reflection Questions</div>
+          <div id="review-questions"></div>
+        </div>
+        <div class="card review-scores-card">
+          <div class="card-label">Week at a Glance</div>
+          <div id="week-at-glance"></div>
+        </div>
+        <div class="card review-intention-card full-width">
+          <div class="card-label">Day 1 Intention — Read When You Want to Quit</div>
+          <textarea id="day1-intention" class="intention-textarea" placeholder="I'm doing this because... and the person I want to become..."></textarea>
+          <button class="save-btn" onclick="saveIntention()">Save Intention</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MILESTONES PAGE -->
+    <section class="page" id="page-milestones">
+      <div class="page-header">
+        <h1 class="page-title">Milestones</h1>
+      </div>
+      <div class="milestones-list" id="milestones-list"></div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section class="page" id="page-settings">
+      <div class="page-header">
+        <h1 class="page-title">Settings</h1>
+      </div>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-label">Challenge Start Date</div>
+          <div class="setting-row">
+            <label>Start Date:</label>
+            <input type="date" id="start-date-input" class="setting-input" />
+            <button class="save-btn" onclick="saveStartDate()">Set Date</button>
+          </div>
+          <div class="setting-note" id="current-start-note"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Data Management</div>
+          <div class="setting-row">
+            <button class="save-btn" onclick="exportData()">Export All Data (JSON)</button>
+          </div>
+          <div class="setting-row" style="margin-top:10px">
+            <button class="danger-btn" onclick="confirmReset()">Reset All Data</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Anti-Burnout Rules</div>
+          <div class="rules-list">
+            <div class="rule-item">Every 7th day is a lighter day — log still, but intensity is optional.</div>
+            <div class="rule-item">You may swap one scored habit for rest on any day, no penalty.</div>
+            <div class="rule-item">5+ Excellent days in a row? Take one bonus low-key evening.</div>
+            <div class="rule-item">Stats look bad one week? That's information, not your identity.</div>
+            <div class="rule-item">The tracker serves you. You don't serve the tracker.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -757,3 +757,12 @@ textarea, input { font-family: inherit; }
 }
 @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 @keyframes fadeOut { to { opacity:0; transform:translateY(-8px); } }
+
+/* ─── ADDITIONAL FIXES ───────────────────────────────────────────────────── */
+.scored-info { flex: 1; min-width: 0; }
+.scored-bar { height: 4px; background: var(--cream-mid); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.scored-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+.s-btn-clear { background: none !important; border-color: transparent !important; color: var(--parchment) !important; font-size: 9px; }
+.s-btn-clear:hover { color: var(--rust) !important; }
+.bin-status { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-muted); margin-left: auto; }
+.binary-row .bin-toggle.on ~ .bin-status { color: var(--terracotta); }

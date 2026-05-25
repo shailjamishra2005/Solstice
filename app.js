@@ -1,11 +1,11 @@
-// ─── STATE ────────────────────────────────────────────────────────────────────
-const TODAY = toISO(new Date());
-let currentStudyTag = 'iimb';
-let currentStudyHours = 1;
-let todayData = DB.getDay(TODAY);
+// ─── STATE ───────────────────────────────────────────────────────────────────
+var TODAY = toISO(new Date());
+var currentStudyTag = 'iimb';
+var currentStudyHours = 1;
+var todayData = DB.getDay(TODAY);
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
   startClock();
   renderTopbar();
   renderDashboard();
@@ -17,23 +17,26 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSettings();
 });
 
-// ─── CLOCK ────────────────────────────────────────────────────────────────────
+// ─── SAVE TODAY ──────────────────────────────────────────────────────────────
+function saveToday() {
+  var ok = DB.setDay(TODAY, todayData);
+  return ok;
+}
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
 function startClock() {
   function tick() {
-    const now = new Date();
-    const h = now.getHours();
-    let greeting;
-    if (h >= 5 && h < 12) greeting = 'Good morning';
-    else if (h >= 12 && h < 17) greeting = 'Good afternoon';
-    else greeting = 'Good evening';
-
+    var now = new Date();
+    var h = now.getHours();
+    var greeting = h >= 5 && h < 12 ? 'Good morning'
+                 : h >= 12 && h < 17 ? 'Good afternoon'
+                 : 'Good evening';
     document.getElementById('greeting').textContent = greeting + ', Shailja.';
     document.getElementById('live-date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     document.getElementById('live-time').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-    const dateShort = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-    ['dash','habits','study','wellness','weekly'].forEach(p => {
-      const el = document.getElementById(p + '-date');
+    var dateShort = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    ['dash','habits','study','wellness','weekly'].forEach(function(p) {
+      var el = document.getElementById(p + '-date');
       if (el) el.textContent = dateShort;
     });
   }
@@ -41,76 +44,81 @@ function startClock() {
   setInterval(tick, 1000);
 }
 
-// ─── PAGE NAVIGATION ──────────────────────────────────────────────────────────
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   document.getElementById('page-' + id).classList.add('active');
   document.querySelector('[data-page="' + id + '"]').classList.add('active');
+  // Refresh data-heavy pages when navigated to
+  if (id === 'habits') renderHabits();
+  if (id === 'wellness') renderWellness();
+  if (id === 'weekly') renderWeekly();
+  if (id === 'milestones') renderMilestones();
+  if (id === 'study') { renderStudyStats(); renderStudyLog(); }
 }
 
-// ─── TOPBAR ───────────────────────────────────────────────────────────────────
+// ─── TOPBAR ──────────────────────────────────────────────────────────────────
 function renderTopbar() {
-  const dayNum = getDayNumber() || 1;
-  const pct = Math.round((dayNum / 75) * 100);
+  var dayNum = getDayNumber();
+  var pct = Math.round((dayNum / 75) * 100);
   document.getElementById('day-label').textContent = 'Day ' + dayNum + ' of 75';
   document.getElementById('pct-label').textContent = pct + '%';
   document.getElementById('progress-fill').style.width = pct + '%';
 
-  const markers = document.getElementById('milestone-markers');
+  var markers = document.getElementById('milestone-markers');
   markers.innerHTML = '';
   MILESTONES.forEach(function(m) {
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.className = 'm-marker';
     div.style.left = ((m.day / 75) * 100) + '%';
     div.title = 'Day ' + m.day + ': ' + m.label;
     markers.appendChild(div);
   });
 
-  const streak = getStreak();
-  document.getElementById('streak-num').textContent = streak;
-
+  document.getElementById('streak-num').textContent = getStreak();
   renderMoodStars();
 }
 
 function renderMoodStars() {
-  const container = document.getElementById('mood-stars');
+  var container = document.getElementById('mood-stars');
   container.innerHTML = '';
-  const mood = todayData.mood || 0;
-  for (let i = 1; i <= 5; i++) {
-    const btn = document.createElement('button');
+  var mood = todayData.mood || 0;
+  for (var i = 1; i <= 5; i++) {
+    var btn = document.createElement('button');
     btn.className = 'mood-star' + (i <= mood ? ' active' : '');
     btn.textContent = i;
-    btn.onclick = (function(val) {
-      return function() {
-        todayData.mood = val;
-        saveToday();
-        renderMoodStars();
-        renderDashboard();
-      };
-    })(i);
+    btn.setAttribute('data-val', i);
+    btn.onclick = function() {
+      todayData.mood = parseInt(this.getAttribute('data-val'));
+      saveToday();
+      renderMoodStars();
+      renderDashboard();
+    };
     container.appendChild(btn);
   }
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function renderDashboard() {
-  const score = calcDayScore(todayData);
-  const pct = score.pct;
-  const earned = score.earned;
-  const total = score.total;
+  var score = calcDayScore(todayData);
+  var pct = score.pct;
+  var earned = score.earned;
+  var total = score.total;
 
-  const circumference = 314;
-  const offset = circumference - (pct / 100) * circumference;
-  const ring = document.getElementById('ring-fill');
+  // Score ring
+  var circumference = 314;
+  var offset = circumference - (pct / 100) * circumference;
+  var ring = document.getElementById('ring-fill');
   ring.style.strokeDashoffset = offset;
   ring.style.stroke = pct >= 85 ? '#7ca87c' : pct >= 60 ? '#c4a056' : pct >= 35 ? '#b87a52' : '#c06060';
   document.getElementById('score-pct').textContent = pct + '%';
   document.getElementById('score-label-inner').textContent = scoreLabel(pct);
   document.getElementById('score-breakdown').innerHTML = earned + ' / ' + total + ' pts<br><em style="font-size:10px">' + scoreLabel(pct) + '</em>';
 
-  const dayNum = getDayNumber() || 1;
-  const streak = getStreak();
+  // Stats
+  var dayNum = getDayNumber();
+  var streak = getStreak();
   document.getElementById('streak-big').textContent = streak + (streak === 1 ? ' day' : ' days');
   document.getElementById('streak-sub').textContent = streak >= 7 ? 'Incredible consistency.' : streak >= 3 ? 'Building momentum.' : 'Keep going.';
   document.getElementById('cat-countdown').textContent = getCATCountdown().toLocaleString();
@@ -123,166 +131,206 @@ function renderDashboard() {
 }
 
 function renderQuickChecklist() {
-  const ql = document.getElementById('quick-habits-list');
+  var ql = document.getElementById('quick-habits-list');
   ql.innerHTML = '';
   ALL_HABITS.forEach(function(h) {
-    const done = h.max ? (todayData.scored[h.id] || 0) > 0 : !!todayData.binary[h.id];
-    const row = document.createElement('div');
+    var done = h.max ? (todayData.scored[h.id] || 0) > 0 : !!todayData.binary[h.id];
+    var scoreText = h.max ? ' <span class="qh-score">' + (todayData.scored[h.id] || 0) + '/' + h.max + '</span>' : '';
+    var row = document.createElement('div');
     row.className = 'quick-habit-row';
     row.innerHTML =
-      '<button class="qh-check ' + (done ? 'done' : '') + '" onclick="quickToggle(\'' + h.id + '\',\'' + (h.max ? 'scored' : 'binary') + '\')">' + (done ? '✓' : '') + '</button>' +
-      '<span class="qh-label ' + (done ? 'done' : '') + '">' + h.icon + ' ' + h.label + '</span>' +
-      (h.max ? '<span class="qh-score">' + (todayData.scored[h.id] || 0) + '/' + h.max + '</span>' : '');
+      '<button class="qh-check' + (done ? ' done' : '') + '" data-id="' + h.id + '" data-type="' + (h.max ? 'scored' : 'binary') + '">' + (done ? '✓' : '') + '</button>' +
+      '<span class="qh-label' + (done ? ' done' : '') + '">' + h.icon + ' ' + h.label + '</span>' + scoreText;
     ql.appendChild(row);
+  });
+  // Attach events after render
+  ql.querySelectorAll('.qh-check').forEach(function(btn) {
+    btn.onclick = function() {
+      quickToggle(this.getAttribute('data-id'), this.getAttribute('data-type'));
+    };
   });
 }
 
 function quickToggle(id, type) {
   if (type === 'scored') {
-    const cur = todayData.scored[id] || 0;
-    const h = HABITS_SCORED.find(function(h) { return h.id === id; });
+    var cur = todayData.scored[id] || 0;
+    var h = null;
+    for (var i = 0; i < HABITS_SCORED.length; i++) { if (HABITS_SCORED[i].id === id) { h = HABITS_SCORED[i]; break; } }
     todayData.scored[id] = cur < h.max ? cur + 1 : 0;
   } else {
     todayData.binary[id] = !todayData.binary[id];
   }
   saveToday();
   renderDashboard();
-  renderHabits();
+  renderHabitsIfVisible();
   renderTopbar();
 }
 
+function renderHabitsIfVisible() {
+  if (document.getElementById('page-habits').classList.contains('active')) {
+    renderHabits();
+  }
+}
+
 function renderWeekBars() {
-  const container = document.getElementById('week-bars');
+  var container = document.getElementById('week-bars');
   container.innerHTML = '';
-  const weekDates = getWeekDates();
-  let total = 0;
+  var weekDates = getWeekDates();
+  var total = 0;
   weekDates.forEach(function(iso) {
-    const d = DB.getDay(iso);
-    const pct = calcDayScore(d).pct;
+    var d = DB.getDay(iso);
+    var pct = calcDayScore(d).pct;
     total += pct;
-    const dayName = new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
-    const isToday = iso === TODAY;
-    const wrap = document.createElement('div');
+    var dayName = new Date(iso + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+    var isToday = iso === TODAY;
+    var wrap = document.createElement('div');
     wrap.className = 'week-bar-wrap';
     wrap.innerHTML =
-      '<div class="week-bar-outer"><div class="week-bar-inner" style="height:' + pct + '%;' + (isToday ? 'opacity:0.7' : '') + '"></div></div>' +
-      '<div class="week-bar-day" style="' + (isToday ? 'color:var(--terracotta);font-weight:600' : '') + '">' + dayName + '</div>';
+      '<div class="week-bar-outer"><div class="week-bar-inner" style="height:' + pct + '%"></div></div>' +
+      '<div class="week-bar-day" style="' + (isToday ? 'color:var(--terracotta);font-weight:700' : '') + '">' + dayName + '</div>';
     container.appendChild(wrap);
   });
-  const avg = Math.round(total / weekDates.length);
-  document.getElementById('week-avg-val').textContent = avg + '%';
+  document.getElementById('week-avg-val').textContent = Math.round(total / weekDates.length) + '%';
 }
 
 function renderMoodHistory() {
-  const mh = document.getElementById('mood-history');
+  var mh = document.getElementById('mood-history');
   mh.innerHTML = '';
   getWeekDates().forEach(function(iso) {
-    const d = DB.getDay(iso);
-    const chip = document.createElement('div');
+    var d = DB.getDay(iso);
+    var chip = document.createElement('div');
     chip.className = 'mood-day-chip';
-    const dayName = new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+    var dayName = new Date(iso + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
     chip.innerHTML = '<span class="mood-chip-day">' + dayName + '</span><span class="mood-chip-val">' + (d.mood || '—') + '</span>';
     mh.appendChild(chip);
   });
 }
 
-// ─── HABITS PAGE ──────────────────────────────────────────────────────────────
+// ─── HABITS PAGE ─────────────────────────────────────────────────────────────
 function renderHabits() {
-  // Scored
-  const sl = document.getElementById('scored-habits-list');
+  renderScoredHabits();
+  renderBinaryHabits();
+  renderHabitCalendars();
+}
+
+function renderScoredHabits() {
+  var sl = document.getElementById('scored-habits-list');
   sl.innerHTML = '';
   HABITS_SCORED.forEach(function(h) {
-    const cur = todayData.scored[h.id] || 0;
-    const row = document.createElement('div');
+    var cur = todayData.scored[h.id] || 0;
+    var row = document.createElement('div');
     row.className = 'scored-row';
-    let btns = '';
-    for (let v = 0; v <= h.max; v++) {
-      btns += '<button class="s-btn ' + (cur === v && v > 0 ? 'active' : '') + '" onclick="setScored(\'' + h.id + '\',' + v + ')">' + v + '</button>';
+    // Score bar
+    var barPct = Math.round((cur / h.max) * 100);
+    var barColor = cur === h.max ? '#7ca87c' : cur > 0 ? '#c4a056' : '#e0d5c5';
+    var btnsHtml = '';
+    for (var v = 1; v <= h.max; v++) {
+      btnsHtml += '<button class="s-btn' + (cur >= v ? ' active' : '') + '" data-id="' + h.id + '" data-val="' + v + '">' + v + '</button>';
     }
+    // Add a clear button
+    btnsHtml += '<button class="s-btn s-btn-clear" data-id="' + h.id + '" data-val="0" title="Clear">✕</button>';
     row.innerHTML =
       '<span class="scored-icon">' + h.icon + '</span>' +
-      '<span class="scored-name">' + h.label + '</span>' +
+      '<div class="scored-info">' +
+        '<span class="scored-name">' + h.label + '</span>' +
+        '<div class="scored-bar"><div class="scored-bar-fill" style="width:' + barPct + '%;background:' + barColor + '"></div></div>' +
+      '</div>' +
       '<span class="scored-tag">' + h.tag + '</span>' +
-      '<div class="scored-btns">' + btns + '</div>';
+      '<div class="scored-btns">' + btnsHtml + '</div>';
     sl.appendChild(row);
   });
-
-  // Binary
-  const bl = document.getElementById('binary-habits-list');
-  bl.innerHTML = '';
-  HABITS_BINARY.forEach(function(h) {
-    const on = !!todayData.binary[h.id];
-    const row = document.createElement('div');
-    row.className = 'binary-row';
-    row.innerHTML =
-      '<button class="bin-toggle ' + (on ? 'on' : '') + '" onclick="toggleBinary(\'' + h.id + '\')"></button>' +
-      '<span class="bin-icon">' + h.icon + '</span>' +
-      '<span class="bin-name">' + h.label + '</span>' +
-      '<span class="bin-cat">' + h.tag + '</span>';
-    bl.appendChild(row);
+  // Attach events
+  sl.querySelectorAll('.s-btn').forEach(function(btn) {
+    btn.onclick = function() {
+      var id = this.getAttribute('data-id');
+      var val = parseInt(this.getAttribute('data-val'));
+      setScored(id, val);
+    };
   });
-
-  renderHabitCalendars();
 }
 
 function setScored(id, val) {
   todayData.scored[id] = val;
   saveToday();
-  renderHabits();
+  renderScoredHabits();
   renderDashboard();
   renderTopbar();
   toast('Saved ✓');
+}
+
+function renderBinaryHabits() {
+  var bl = document.getElementById('binary-habits-list');
+  bl.innerHTML = '';
+  HABITS_BINARY.forEach(function(h) {
+    var on = !!todayData.binary[h.id];
+    var row = document.createElement('div');
+    row.className = 'binary-row';
+    row.innerHTML =
+      '<button class="bin-toggle' + (on ? ' on' : '') + '" data-id="' + h.id + '"></button>' +
+      '<span class="bin-icon">' + h.icon + '</span>' +
+      '<span class="bin-name">' + h.label + '</span>' +
+      '<span class="bin-cat">' + h.tag + '</span>' +
+      '<span class="bin-status">' + (on ? '✓ Done' : 'Not yet') + '</span>';
+    bl.appendChild(row);
+  });
+  bl.querySelectorAll('.bin-toggle').forEach(function(btn) {
+    btn.onclick = function() {
+      toggleBinary(this.getAttribute('data-id'));
+    };
+  });
 }
 
 function toggleBinary(id) {
   todayData.binary[id] = !todayData.binary[id];
   saveToday();
-  renderHabits();
+  renderBinaryHabits();
   renderDashboard();
   renderTopbar();
-  toast('Saved ✓');
+  toast(todayData.binary[id] ? 'Done ✓' : 'Unmarked');
 }
 
 function renderHabitCalendars() {
-  const container = document.getElementById('habit-calendars');
+  var container = document.getElementById('habit-calendars');
   container.innerHTML = '';
-  const start = DB.getStartDate();
+  var start = DB.getStartDate();
   if (!start) {
-    container.innerHTML = '<p style="color:var(--ink-muted);font-size:12px">Set your start date in Settings first.</p>';
+    container.innerHTML = '<p style="color:var(--ink-muted);font-size:13px;padding:8px 0">Set your start date in Settings to see the 75-day calendar.</p>';
     return;
   }
-
+  var startParts = start.split('-');
   ALL_HABITS.forEach(function(h) {
-    const row = document.createElement('div');
+    var row = document.createElement('div');
     row.className = 'hcal-row';
-    const nameDiv = document.createElement('div');
+    var nameDiv = document.createElement('div');
     nameDiv.className = 'hcal-name';
     nameDiv.innerHTML = h.icon + ' ' + h.label;
-    const dots = document.createElement('div');
+    var dots = document.createElement('div');
     dots.className = 'hcal-dots';
-
-    for (let i = 0; i < 75; i++) {
-      const d = new Date(start + 'T00:00:00');
+    var nowDate = new Date();
+    nowDate.setHours(0,0,0,0);
+    for (var i = 0; i < 75; i++) {
+      var d = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
       d.setDate(d.getDate() + i);
-      const iso = toISO(d);
-      const isToday = iso === TODAY;
-      const isFuture = d > new Date();
-      const dayData = DB.getDay(iso);
-      let cls = 'hcal-dot';
+      d.setHours(0,0,0,0);
+      var iso = toISO(d);
+      var isToday = iso === TODAY;
+      var isFuture = d > nowDate;
+      var dayData = DB.getDay(iso);
+      var cls = 'hcal-dot';
       if (isToday) cls += ' today';
       else if (isFuture) cls += ' future';
       else {
         if (h.max) {
-          const v = dayData.scored[h.id] || 0;
-          if (v === h.max) cls += ' done-full';
+          var v = dayData.scored[h.id] || 0;
+          if (v >= h.max) cls += ' done-full';
           else if (v > 0) cls += ' done-partial';
         } else {
           if (dayData.binary[h.id]) cls += ' done-full';
         }
       }
-      const dot = document.createElement('div');
+      var dot = document.createElement('div');
       dot.className = cls;
-      dot.title = 'Day ' + (i + 1) + ': ' + iso;
+      dot.title = 'Day ' + (i + 1) + ' — ' + iso;
       dots.appendChild(dot);
     }
     row.appendChild(nameDiv);
@@ -291,52 +339,62 @@ function renderHabitCalendars() {
   });
 }
 
-// ─── STUDY PAGE ───────────────────────────────────────────────────────────────
+// ─── STUDY PAGE ──────────────────────────────────────────────────────────────
 function renderStudy() {
-  const form = document.getElementById('study-form');
+  var form = document.getElementById('study-form');
   form.innerHTML = '';
 
-  // Tags
-  const tagDiv = document.createElement('div');
+  // Category tags
+  var tagDiv = document.createElement('div');
   tagDiv.innerHTML = '<div class="study-field-label">Category</div>';
-  const tagRow = document.createElement('div');
+  var tagRow = document.createElement('div');
   tagRow.className = 'study-tags';
   STUDY_TAGS.forEach(function(t) {
-    const btn = document.createElement('button');
-    btn.className = 'study-tag ' + (currentStudyTag === t.id ? 'active' : '');
+    var btn = document.createElement('button');
+    btn.className = 'study-tag' + (currentStudyTag === t.id ? ' active' : '');
     btn.textContent = t.label;
-    btn.onclick = function() { currentStudyTag = t.id; renderStudy(); };
+    btn.setAttribute('data-tag', t.id);
+    btn.onclick = function() {
+      currentStudyTag = this.getAttribute('data-tag');
+      form.querySelectorAll('.study-tag').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+    };
     tagRow.appendChild(btn);
   });
   tagDiv.appendChild(tagRow);
   form.appendChild(tagDiv);
 
-  // Subject
-  const subDiv = document.createElement('div');
+  // Subject input
+  var subDiv = document.createElement('div');
   subDiv.innerHTML = '<div class="study-field-label">Subject / Topic</div><input class="study-input" id="study-subject" placeholder="e.g. Statistics — CLT, Confidence Intervals" />';
   form.appendChild(subDiv);
 
   // Hours
-  const hrDiv = document.createElement('div');
+  var hrDiv = document.createElement('div');
   hrDiv.innerHTML = '<div class="study-field-label">Hours Studied</div>';
-  const hrRow = document.createElement('div');
+  var hrRow = document.createElement('div');
   hrRow.className = 'hour-btns';
   [0.5, 1, 1.5, 2, 2.5, 3, 4].forEach(function(h) {
-    const btn = document.createElement('button');
-    btn.className = 'h-btn ' + (currentStudyHours === h ? 'active' : '');
+    var btn = document.createElement('button');
+    btn.className = 'h-btn' + (currentStudyHours === h ? ' active' : '');
     btn.textContent = h + 'h';
-    btn.onclick = function() { currentStudyHours = h; renderStudy(); };
+    btn.setAttribute('data-hrs', h);
+    btn.onclick = function() {
+      currentStudyHours = parseFloat(this.getAttribute('data-hrs'));
+      hrRow.querySelectorAll('.h-btn').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+    };
     hrRow.appendChild(btn);
   });
   hrDiv.appendChild(hrRow);
   form.appendChild(hrDiv);
 
-  // Note
-  const noteDiv = document.createElement('div');
+  // Notes
+  var noteDiv = document.createElement('div');
   noteDiv.innerHTML = '<div class="study-field-label">Notes (optional)</div><input class="study-input" id="study-note" placeholder="What did you cover? Any blockers?" />';
   form.appendChild(noteDiv);
 
-  const saveBtn = document.createElement('button');
+  var saveBtn = document.createElement('button');
   saveBtn.className = 'save-btn';
   saveBtn.textContent = 'Log Session';
   saveBtn.onclick = logStudySession;
@@ -347,54 +405,53 @@ function renderStudy() {
 }
 
 function logStudySession() {
-  const subj = document.getElementById('study-subject').value.trim();
-  const note = document.getElementById('study-note').value.trim();
+  var subj = document.getElementById('study-subject').value.trim();
   if (!subj) { toast('Add a subject first'); return; }
+  var note = document.getElementById('study-note').value.trim();
   DB.addStudyEntry({ date: TODAY, tag: currentStudyTag, subject: subj, hours: currentStudyHours, note: note });
   document.getElementById('study-subject').value = '';
   document.getElementById('study-note').value = '';
   renderStudyStats();
   renderStudyLog();
-  toast('Study session logged ✓');
+  toast('Logged ' + currentStudyHours + 'h ✓');
 }
 
 function renderStudyStats() {
-  const log = DB.getStudyLog();
-  const stats = document.getElementById('study-stats');
-  const todayHrs = log.filter(function(e) { return e.date === TODAY; }).reduce(function(a, e) { return a + e.hours; }, 0);
-  const weekDates = getWeekDates();
-  const weekHrs = log.filter(function(e) { return weekDates.includes(e.date); }).reduce(function(a, e) { return a + e.hours; }, 0);
-  const totalHrs = log.reduce(function(a, e) { return a + e.hours; }, 0);
-
-  let html = '<div class="study-stat-row"><span class="ss-label">Today</span><span class="ss-val">' + todayHrs + 'h</span></div>';
-  html += '<div class="study-stat-row"><span class="ss-label">This Week</span><span class="ss-val">' + weekHrs + 'h</span></div>';
-  html += '<div class="study-stat-row"><span class="ss-label">Total Logged</span><span class="ss-val">' + totalHrs + 'h</span></div>';
+  var log = DB.getStudyLog();
+  var stats = document.getElementById('study-stats');
+  var weekDates = getWeekDates();
+  var todayHrs = log.filter(function(e) { return e.date === TODAY; }).reduce(function(a, e) { return a + e.hours; }, 0);
+  var weekHrs  = log.filter(function(e) { return weekDates.indexOf(e.date) > -1; }).reduce(function(a, e) { return a + e.hours; }, 0);
+  var totalHrs = log.reduce(function(a, e) { return a + e.hours; }, 0);
+  var html = '<div class="study-stat-row"><span class="ss-label">Today</span><span class="ss-val">' + todayHrs + 'h</span></div>' +
+    '<div class="study-stat-row"><span class="ss-label">This Week</span><span class="ss-val">' + weekHrs + 'h</span></div>' +
+    '<div class="study-stat-row"><span class="ss-label">Total Logged</span><span class="ss-val">' + totalHrs + 'h</span></div>';
   STUDY_TAGS.forEach(function(t) {
-    const hrs = log.filter(function(e) { return e.tag === t.id; }).reduce(function(a, e) { return a + e.hours; }, 0);
-    html += '<div class="study-stat-row"><span class="ss-label">' + t.label + '</span><span class="ss-val" style="font-size:14px">' + hrs + 'h</span></div>';
+    var hrs = log.filter(function(e) { return e.tag === t.id; }).reduce(function(a, e) { return a + e.hours; }, 0);
+    html += '<div class="study-stat-row"><span class="ss-label">' + t.label + '</span><span class="ss-val">' + hrs + 'h</span></div>';
   });
   stats.innerHTML = html;
 }
 
 function renderStudyLog() {
-  const log = DB.getStudyLog();
-  const container = document.getElementById('study-log-list');
+  var log = DB.getStudyLog();
+  var container = document.getElementById('study-log-list');
   if (log.length === 0) {
-    container.innerHTML = '<p style="color:var(--ink-muted);font-size:12px">No sessions logged yet.</p>';
+    container.innerHTML = '<p style="color:var(--ink-muted);font-size:12px;padding:8px 0">No sessions logged yet.</p>';
     return;
   }
   container.innerHTML = log.slice(0, 20).map(function(e) {
-    const tagLabel = (STUDY_TAGS.find(function(t) { return t.id === e.tag; }) || {}).label || e.tag;
+    var tagLabel = '';
+    for (var i = 0; i < STUDY_TAGS.length; i++) { if (STUDY_TAGS[i].id === e.tag) { tagLabel = STUDY_TAGS[i].label; break; } }
     return '<div class="study-log-item">' +
       '<span class="sl-date">' + formatDate(e.date) + '</span>' +
       '<span class="sl-tag">' + tagLabel + '</span>' +
       '<span class="sl-subject">' + e.subject + (e.note ? ' — ' + e.note : '') + '</span>' +
-      '<span class="sl-hours">' + e.hours + 'h</span>' +
-      '</div>';
+      '<span class="sl-hours">' + e.hours + 'h</span></div>';
   }).join('');
 }
 
-// ─── WELLNESS PAGE ────────────────────────────────────────────────────────────
+// ─── WELLNESS PAGE ───────────────────────────────────────────────────────────
 function renderWellness() {
   renderWater();
   renderSleep();
@@ -405,144 +462,158 @@ function renderWellness() {
 }
 
 function renderWater() {
-  const cups = 8;
-  const filled = todayData.water || 0;
-  const container = document.getElementById('water-tracker');
-  container.innerHTML = '<div class="water-cups" id="water-cups"></div><div class="water-label">' + (filled * 0.25).toFixed(2) + 'L / 2L target</div>';
-  const cupsEl = document.getElementById('water-cups');
-  for (let i = 0; i < cups; i++) {
-    const cup = document.createElement('div');
-    cup.className = 'water-cup ' + (i < filled ? 'filled' : '');
-    const inner = document.createElement('div');
-    inner.className = 'fill-inner';
-    inner.style.height = i < filled ? '100%' : '0%';
-    cup.appendChild(inner);
-    cup.onclick = (function(idx) {
-      return function() {
-        todayData.water = (todayData.water === idx + 1) ? idx : idx + 1;
-        saveToday(); renderWellness(); renderDashboard();
-      };
-    })(i);
-    cupsEl.appendChild(cup);
+  var filled = todayData.water || 0;
+  var container = document.getElementById('water-tracker');
+  var html = '<div class="water-cups">';
+  for (var i = 0; i < 8; i++) {
+    html += '<div class="water-cup' + (i < filled ? ' filled' : '') + '" data-cup="' + i + '"><div class="fill-inner" style="height:' + (i < filled ? '100%' : '0%') + '"></div></div>';
   }
+  html += '</div><div class="water-label">' + (filled * 0.25).toFixed(2) + 'L / 2L target</div>';
+  container.innerHTML = html;
+  container.querySelectorAll('.water-cup').forEach(function(cup) {
+    cup.onclick = function() {
+      var idx = parseInt(this.getAttribute('data-cup'));
+      todayData.water = (todayData.water === idx + 1) ? idx : idx + 1;
+      saveToday(); renderWater(); renderDashboard();
+    };
+  });
 }
 
 function renderSleep() {
-  const container = document.getElementById('sleep-log');
-  const val = todayData.sleep || 7;
-  container.innerHTML =
+  var val = todayData.sleep || 7;
+  var quality = val >= 7.5 ? '✦ Well rested' : val >= 6 ? '△ Adequate' : '⚠ Needs attention';
+  document.getElementById('sleep-log').innerHTML =
     '<div class="sleep-row">' +
-    '<label>Hours slept</label>' +
-    '<input type="range" min="3" max="12" step="0.5" value="' + val + '" id="sleep-range" oninput="updateSleep(this.value)" />' +
-    '<span class="sleep-val" id="sleep-val">' + val + 'h</span>' +
+      '<label>Hours slept</label>' +
+      '<input type="range" min="3" max="12" step="0.5" value="' + val + '" id="sleep-range" />' +
+      '<span class="sleep-val" id="sleep-val">' + val + 'h</span>' +
     '</div>' +
-    '<div style="font-size:11px;color:var(--ink-muted);margin-top:8px">' + (val >= 7.5 ? '✦ Well rested' : val >= 6 ? '△ Adequate' : '⚠ Needs attention') + '</div>';
-}
-
-function updateSleep(val) {
-  document.getElementById('sleep-val').textContent = val + 'h';
-  todayData.sleep = parseFloat(val);
-  saveToday();
+    '<div style="font-size:11px;color:var(--ink-muted);margin-top:8px" id="sleep-quality">' + quality + '</div>';
+  document.getElementById('sleep-range').oninput = function() {
+    var v = parseFloat(this.value);
+    document.getElementById('sleep-val').textContent = v + 'h';
+    document.getElementById('sleep-quality').textContent = v >= 7.5 ? '✦ Well rested' : v >= 6 ? '△ Adequate' : '⚠ Needs attention';
+    todayData.sleep = v;
+    saveToday();
+  };
 }
 
 function renderProtein() {
-  const items = ['Morning smoothie', 'Protein with lunch', 'Protein with dinner', 'Extra snack'];
-  const checked = todayData.protein || [];
-  document.getElementById('protein-log').innerHTML = '<div class="protein-check">' +
-    items.map(function(item, i) {
-      return '<div class="pc-row">' +
-        '<button class="pc-check ' + (checked.includes(i) ? 'on' : '') + '" onclick="toggleProtein(' + i + ')">' + (checked.includes(i) ? '✓' : '') + '</button>' +
-        '<span class="pc-label">' + item + '</span></div>';
-    }).join('') + '</div>';
-}
-
-function toggleProtein(i) {
-  const arr = todayData.protein || [];
-  const idx = arr.indexOf(i);
-  if (idx > -1) arr.splice(idx, 1); else arr.push(i);
-  todayData.protein = arr;
-  saveToday(); renderProtein();
+  var items = ['Morning smoothie', 'Protein with lunch', 'Protein with dinner', 'Extra snack'];
+  var checked = todayData.protein || [];
+  var container = document.getElementById('protein-log');
+  var html = '<div class="protein-check">';
+  items.forEach(function(item, i) {
+    html += '<div class="pc-row"><button class="pc-check' + (checked.indexOf(i) > -1 ? ' on' : '') + '" data-idx="' + i + '">' + (checked.indexOf(i) > -1 ? '✓' : '') + '</button><span class="pc-label">' + item + '</span></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  container.querySelectorAll('.pc-check').forEach(function(btn) {
+    btn.onclick = function() {
+      var idx = parseInt(this.getAttribute('data-idx'));
+      var arr = todayData.protein || [];
+      var pos = arr.indexOf(idx);
+      if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+      todayData.protein = arr;
+      saveToday(); renderProtein();
+    };
+  });
 }
 
 function renderMovement() {
-  const opts = ['Swimming 🏊', 'Badminton 🏸', 'Walk 🚶', 'Yoga 🧘', 'Gym 💪', 'Rest day'];
-  const sel = todayData.movement || [];
-  document.getElementById('movement-log').innerHTML = '<div class="movement-opts">' +
-    opts.map(function(o, i) {
-      return '<button class="move-opt ' + (sel.includes(i) ? 'active' : '') + '" onclick="toggleMovement(' + i + ')">' + o + '</button>';
-    }).join('') + '</div>';
-}
-
-function toggleMovement(i) {
-  const arr = todayData.movement || [];
-  const idx = arr.indexOf(i);
-  if (idx > -1) arr.splice(idx, 1); else arr.push(i);
-  todayData.movement = arr;
-  saveToday(); renderMovement();
+  var opts = ['Swimming 🏊', 'Badminton 🏸', 'Walk 🚶', 'Yoga 🧘', 'Gym 💪', 'Rest day'];
+  var sel = todayData.movement || [];
+  var container = document.getElementById('movement-log');
+  var html = '<div class="movement-opts">';
+  opts.forEach(function(o, i) {
+    html += '<button class="move-opt' + (sel.indexOf(i) > -1 ? ' active' : '') + '" data-idx="' + i + '">' + o + '</button>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  container.querySelectorAll('.move-opt').forEach(function(btn) {
+    btn.onclick = function() {
+      var idx = parseInt(this.getAttribute('data-idx'));
+      var arr = todayData.movement || [];
+      var pos = arr.indexOf(idx);
+      if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+      todayData.movement = arr;
+      saveToday(); renderMovement();
+    };
+  });
 }
 
 function renderSkin() {
-  const items = ['Morning cleanse', 'Sunscreen', 'Evening routine', 'Hair care', 'Nails / grooming'];
-  const checked = todayData.skin || [];
-  document.getElementById('skin-log').innerHTML = '<div class="skin-checks">' +
-    items.map(function(item, i) {
-      return '<div class="pc-row">' +
-        '<button class="pc-check ' + (checked.includes(i) ? 'on' : '') + '" onclick="toggleSkin(' + i + ')">' + (checked.includes(i) ? '✓' : '') + '</button>' +
-        '<span class="pc-label">' + item + '</span></div>';
-    }).join('') + '</div>';
-}
-
-function toggleSkin(i) {
-  const arr = todayData.skin || [];
-  const idx = arr.indexOf(i);
-  if (idx > -1) arr.splice(idx, 1); else arr.push(i);
-  todayData.skin = arr;
-  saveToday(); renderSkin();
+  var items = ['Morning cleanse', 'Sunscreen', 'Evening routine', 'Hair care', 'Nails / grooming'];
+  var checked = todayData.skin || [];
+  var container = document.getElementById('skin-log');
+  var html = '<div class="skin-checks">';
+  items.forEach(function(item, i) {
+    html += '<div class="pc-row"><button class="pc-check' + (checked.indexOf(i) > -1 ? ' on' : '') + '" data-idx="' + i + '">' + (checked.indexOf(i) > -1 ? '✓' : '') + '</button><span class="pc-label">' + item + '</span></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  container.querySelectorAll('.pc-check').forEach(function(btn) {
+    btn.onclick = function() {
+      var idx = parseInt(this.getAttribute('data-idx'));
+      var arr = todayData.skin || [];
+      var pos = arr.indexOf(idx);
+      if (pos > -1) arr.splice(pos, 1); else arr.push(idx);
+      todayData.skin = arr;
+      saveToday(); renderSkin();
+    };
+  });
 }
 
 function renderMoodJournal() {
-  const container = document.getElementById('mood-journal');
-  const mood = todayData.mood || 0;
-  const note = todayData.moodNote || '';
-  container.innerHTML = '<div class="mood-big-stars" id="mood-big-stars"></div>' +
-    '<textarea class="mood-note" placeholder="How are you actually feeling today?" id="mood-note-ta">' + note + '</textarea>' +
-    '<button class="save-btn" onclick="saveMoodNote()" style="margin-top:8px">Save</button>';
-  const stars = document.getElementById('mood-big-stars');
-  const labels = ['', 'Rough 😞', 'Low 😐', 'Okay 🙂', 'Good 😊', 'Great 🌟'];
-  for (let i = 1; i <= 5; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'mood-big-star ' + (i <= mood ? 'active' : '');
-    btn.textContent = i;
-    btn.title = labels[i];
-    btn.onclick = (function(val) {
-      return function() { todayData.mood = val; saveToday(); renderMoodJournal(); renderMoodStars(); renderDashboard(); };
-    })(i);
-    stars.appendChild(btn);
+  var mood = todayData.mood || 0;
+  var note = todayData.moodNote || '';
+  var labels = ['', 'Rough 😞', 'Low 😐', 'Okay 🙂', 'Good 😊', 'Great 🌟'];
+  var container = document.getElementById('mood-journal');
+  var starsHtml = '<div class="mood-big-stars">';
+  for (var i = 1; i <= 5; i++) {
+    starsHtml += '<button class="mood-big-star' + (i <= mood ? ' active' : '') + '" data-val="' + i + '" title="' + labels[i] + '">' + i + '</button>';
   }
+  starsHtml += '</div>';
+  container.innerHTML = starsHtml +
+    '<textarea class="mood-note" id="mood-note-ta" placeholder="How are you actually feeling today?">' + note + '</textarea>' +
+    '<button class="save-btn" id="mood-save-btn" style="margin-top:8px">Save Note</button>';
+  container.querySelectorAll('.mood-big-star').forEach(function(btn) {
+    btn.onclick = function() {
+      todayData.mood = parseInt(this.getAttribute('data-val'));
+      saveToday(); renderMoodJournal(); renderMoodStars(); renderDashboard();
+    };
+  });
+  document.getElementById('mood-save-btn').onclick = function() {
+    todayData.moodNote = document.getElementById('mood-note-ta').value;
+    saveToday(); toast('Mood note saved ✓');
+  };
 }
 
-function saveMoodNote() {
-  todayData.moodNote = document.getElementById('mood-note-ta').value;
-  saveToday(); toast('Mood note saved ✓');
-}
-
-// ─── WEEKLY REVIEW PAGE ───────────────────────────────────────────────────────
-const REVIEW_QUESTIONS = [
+// ─── WEEKLY REVIEW ───────────────────────────────────────────────────────────
+var REVIEW_QUESTIONS = [
   'What was my highest-energy day this week? What made it work?',
   'What habit slipped most — and what was actually going on underneath that?',
   'Did I experience any emotional spiral this week? What triggered it?',
   'On a scale of 1–10: how disciplined did I feel? How kind was I to myself?',
   'What is one thing I want to do differently next week?',
-  'What am I genuinely proud of from this week — even if it was small?',
+  'What am I genuinely proud of from this week — even if it was small?'
 ];
 
+function getWeekStart() {
+  var d = new Date();
+  var day = d.getDay();
+  var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return toISO(d);
+}
+
 function renderWeekly() {
-  const rq = document.getElementById('review-questions');
+  var rq = document.getElementById('review-questions');
   rq.innerHTML = '';
-  const weekKey = 'week_' + getWeekStart();
-  const saved = DB.get(weekKey, {});
+  var weekKey = 'week_' + getWeekStart();
+  var saved = DB.get(weekKey, {});
   REVIEW_QUESTIONS.forEach(function(q, i) {
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.className = 'review-q';
     div.innerHTML =
       '<div class="review-q-num">Q' + (i + 1) + '</div>' +
@@ -550,7 +621,7 @@ function renderWeekly() {
       '<textarea class="review-textarea" id="rq-' + i + '" placeholder="Your reflection...">' + (saved['q' + i] || '') + '</textarea>';
     rq.appendChild(div);
   });
-  const saveBtn = document.createElement('button');
+  var saveBtn = document.createElement('button');
   saveBtn.className = 'save-btn';
   saveBtn.textContent = 'Save Reflections';
   saveBtn.style.marginTop = '12px';
@@ -562,10 +633,10 @@ function renderWeekly() {
 }
 
 function saveWeeklyReview() {
-  const weekKey = 'week_' + getWeekStart();
-  const data = {};
+  var weekKey = 'week_' + getWeekStart();
+  var data = {};
   REVIEW_QUESTIONS.forEach(function(_, i) {
-    const el = document.getElementById('rq-' + i);
+    var el = document.getElementById('rq-' + i);
     data['q' + i] = el ? el.value : '';
   });
   DB.set(weekKey, data);
@@ -573,55 +644,51 @@ function saveWeeklyReview() {
 }
 
 function renderWeekGlance() {
-  const container = document.getElementById('week-at-glance');
+  var container = document.getElementById('week-at-glance');
   container.innerHTML = '';
-  const days = document.createElement('div');
-  days.className = 'day-glance';
+  var wrap = document.createElement('div');
+  wrap.className = 'day-glance';
   getWeekDates().forEach(function(iso) {
-    const d = DB.getDay(iso);
-    const pct = calcDayScore(d).pct;
-    const dayName = new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
-    const isToday = iso === TODAY;
-    const row = document.createElement('div');
+    var d = DB.getDay(iso);
+    var pct = calcDayScore(d).pct;
+    var dayName = new Date(iso + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+    var isToday = iso === TODAY;
+    var row = document.createElement('div');
     row.className = 'dg-row';
     row.innerHTML =
-      '<span class="dg-day" style="' + (isToday ? 'color:var(--terracotta)' : '') + '">' + dayName + '</span>' +
+      '<span class="dg-day"' + (isToday ? ' style="color:var(--terracotta);font-weight:600"' : '') + '>' + dayName + '</span>' +
       '<div class="dg-bar-outer"><div class="dg-bar-inner" style="width:' + pct + '%"></div></div>' +
       '<span class="dg-pct">' + pct + '%</span>' +
       '<span class="dg-label">' + scoreLabel(pct) + '</span>';
-    days.appendChild(row);
+    wrap.appendChild(row);
   });
-  container.appendChild(days);
-}
-
-function getWeekStart() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return toISO(d);
+  container.appendChild(wrap);
 }
 
 function saveIntention() {
-  const val = document.getElementById('day1-intention').value;
+  var val = document.getElementById('day1-intention').value;
   DB.setIntention(val);
   toast('Intention saved ✓');
 }
 
-// ─── MILESTONES PAGE ──────────────────────────────────────────────────────────
+// ─── MILESTONES ──────────────────────────────────────────────────────────────
 function renderMilestones() {
-  const container = document.getElementById('milestones-list');
+  var container = document.getElementById('milestones-list');
   container.innerHTML = '';
-  const dayNum = getDayNumber() || 1;
-
+  var dayNum = getDayNumber();
+  var nextUp = null;
+  for (var j = 0; j < MILESTONES.length; j++) {
+    if (MILESTONES[j].day >= dayNum) { nextUp = MILESTONES[j]; break; }
+  }
   MILESTONES.forEach(function(m) {
-    const reached = dayNum >= m.day;
-    const nextUp = MILESTONES.find(function(x) { return x.day >= dayNum; });
-    const isNext = nextUp && nextUp.day === m.day && !reached;
-    const daysLeft = m.day - dayNum;
-
-    const card = document.createElement('div');
-    card.className = 'milestone-card ' + (reached ? 'reached' : isNext ? 'next' : '');
+    var reached = dayNum > m.day || (dayNum === m.day);
+    var isNext = nextUp && nextUp.day === m.day && !reached;
+    // Actually: reached means dayNum >= m.day
+    reached = dayNum >= m.day;
+    isNext = nextUp && nextUp.day === m.day && !reached;
+    var daysLeft = m.day - dayNum;
+    var card = document.createElement('div');
+    card.className = 'milestone-card' + (reached ? ' reached' : isNext ? ' next' : '');
     card.innerHTML =
       '<div class="ms-icon">' + (reached ? '✓' : m.icon) + '</div>' +
       '<div class="ms-body">' +
@@ -629,42 +696,46 @@ function renderMilestones() {
         '<div class="ms-title">' + m.label + '</div>' +
         '<div class="ms-reward">🎁 ' + m.reward + '</div>' +
       '</div>' +
-      (isNext ? '<div class="ms-badge"><div class="ms-badge-num">' + daysLeft + '</div><div class="ms-badge-label">days left</div></div>' : '') +
+      (isNext ? '<div class="ms-badge"><div class="ms-badge-num">' + Math.max(0, daysLeft) + '</div><div class="ms-badge-label">days left</div></div>' : '') +
       (reached ? '<div class="ms-badge" style="background:var(--terracotta)"><div class="ms-badge-num">✓</div><div class="ms-badge-label" style="color:rgba(255,255,255,0.6)">earned</div></div>' : '');
     container.appendChild(card);
   });
 }
 
-// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
+// ─── SETTINGS ────────────────────────────────────────────────────────────────
 function renderSettings() {
-  const startDate = DB.getStartDate();
-  const input = document.getElementById('start-date-input');
-  const note = document.getElementById('current-start-note');
+  var startDate = DB.getStartDate();
+  var input = document.getElementById('start-date-input');
+  var note = document.getElementById('current-start-note');
   if (startDate) {
     input.value = startDate;
     note.textContent = 'Challenge started: ' + formatDate(startDate);
   } else {
-    note.textContent = 'No start date set yet. Pick one below.';
+    note.textContent = 'No start date set yet. Pick a date and click Save.';
   }
 }
 
 function saveStartDate() {
-  const val = document.getElementById('start-date-input').value;
+  var val = document.getElementById('start-date-input').value;
   if (!val) { toast('Pick a date first'); return; }
-  DB.setStartDate(val);
-  document.getElementById('current-start-note').textContent = 'Challenge started: ' + formatDate(val);
-  renderTopbar();
-  renderMilestones();
-  renderDashboard();
-  renderHabitCalendars();
-  toast('Start date saved ✓');
+  var ok = DB.setStartDate(val);
+  if (ok) {
+    document.getElementById('current-start-note').textContent = 'Challenge started: ' + formatDate(val);
+    renderTopbar();
+    renderMilestones();
+    renderDashboard();
+    renderHabitCalendars();
+    toast('Start date saved ✓');
+  } else {
+    toast('Could not save — check browser storage settings');
+  }
 }
 
 function exportData() {
-  const data = DB.exportAll();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  var data = DB.exportAll();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
   a.href = url;
   a.download = 'solstice-backup-' + TODAY + '.json';
   a.click();
@@ -679,16 +750,11 @@ function confirmReset() {
   }
 }
 
-// ─── SAVE ─────────────────────────────────────────────────────────────────────
-function saveToday() {
-  DB.setDay(TODAY, todayData);
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
+// ─── TOAST ───────────────────────────────────────────────────────────────────
 function toast(msg) {
-  const existing = document.querySelector('.toast');
+  var existing = document.querySelector('.toast');
   if (existing) existing.remove();
-  const el = document.createElement('div');
+  var el = document.createElement('div');
   el.className = 'toast';
   el.textContent = msg;
   document.body.appendChild(el);
